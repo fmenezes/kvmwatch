@@ -52,6 +52,37 @@ Uninstall:
 ./uninstall.sh
 ```
 
+## Build from source
+
+Requirements: **macOS 13 (Ventura) or later** and the Xcode Command Line Tools
+(`xcode-select --install`), which provide `swift` (5.9+). No other dependencies.
+
+```sh
+git clone https://github.com/fmenezes/kvmwatch.git
+cd kvmwatch
+swift build -c release
+```
+
+The binary is written to `.build/release/kvmwatch`. Run it directly:
+
+```sh
+.build/release/kvmwatch --status    # print detection state
+.build/release/kvmwatch --detect    # list USB devices to configure
+.build/release/kvmwatch             # daemon mode (Ctrl-C to stop)
+```
+
+Or via SwiftPM without a separate build step:
+
+```sh
+swift run -c release kvmwatch --status
+```
+
+To install the binary on your `PATH` manually (instead of `./install.sh`):
+
+```sh
+install -m 755 .build/release/kvmwatch /usr/local/bin/kvmwatch
+```
+
 ## Configure
 
 Config file: `~/.config/kvmwatch/config.json`
