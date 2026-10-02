@@ -28,6 +28,9 @@ func printUsage() {
       --poll <secs>      detection interval (default 1.0)
       --on-away <mode>   mirror | none | notify   (default mirror)
       --on-return <mode> extend | none            (default extend)
+      --print-config     print the effective config (defaults + file + flags) and exit
+      --set <key=value>  update a config key (repeatable); creates the file if missing
+      --init             write the default config file if it does not already exist
       -h, --help         show this help
       --version          show version
     """)
@@ -41,6 +44,9 @@ struct Options {
     var poll: Double?
     var onAway: String?
     var onReturn: String?
+    var sets: [String] = []
+    var printConfig = false
+    var initConfig = false
     var dryRun = false
     var mode = "run"
 }
@@ -58,6 +64,9 @@ func parse(_ args: [String]) -> Options {
         case "--poll": if let v = next(), let n = Double(v) { options.poll = n }
         case "--on-away": options.onAway = next()
         case "--on-return": options.onReturn = next()
+        case "--set": if let pair = next() { options.sets.append(pair) }
+        case "--print-config": options.printConfig = true
+        case "--init": options.initConfig = true
         case "--status": options.mode = "status"
         case "--once": options.mode = "once"
         case "--detect": options.mode = "detect"
@@ -84,6 +93,44 @@ if let v = options.poll { config.pollSeconds = v }
 if let v = options.onAway { config.onAway = v }
 if let v = options.onReturn { config.onReturn = v }
 
+// Config-management commands write the file and exit.
+if options.initConfig {
+    let path = Config.expandedPath(options.configPath)
+    if Config.fileExists(path: options.configPath) {
+        print("config already exists: \(path)")
+    } else if config.save(path: options.configPath) {
+        print("wrote config: \(path)")
+        print(config.encoded())
+    } else {
+        exit(1)
+    }
+    exit(0)
+}
+
+if !options.sets.isEmpty {
+    for pair in options.sets {
+        guard let eq = pair.firstIndex(of: "=") else {
+            FileHandle.standardError.write("kvmwatch: --set expects key=value, got '\(pair)'\n".data(using: .utf8)!)
+            exit(2)
+        }
+        let key = String(pair[..<eq])
+        let value = String(pair[pair.index(after: eq)...])
+        guard config.set(key: key, value: value) else {
+            FileHandle.standardError.write("kvmwatch: invalid --set \(pair) (valid keys: \(Config.settableKeys.joined(separator: ", ")))\n".data(using: .utf8)!)
+            exit(2)
+        }
+    }
+    guard config.save(path: options.configPath) else { exit(1) }
+    print("updated \(Config.expandedPath(options.configPath)):")
+    print(config.encoded())
+    exit(0)
+}
+
+if options.printConfig {
+    print(config.encoded())
+    exit(0)
+}
+
 switch options.mode {
 case "status":
     print(Watcher(config: config, dryRun: true).describe())
@@ -97,6 +144,9 @@ case "once":
     watcher.act(present: USB.present(vid: config.monitorVid.value, pid: config.monitorPid.value))
 
 default:
+    if !Config.fileExists(path: options.configPath), config.save(path: options.configPath) {
+        Log.line("wrote default config: \(Config.expandedPath(options.configPath))")
+    }
     let watcher = Watcher(config: config, dryRun: options.dryRun)
     watcher.run()
 }

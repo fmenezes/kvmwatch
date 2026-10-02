@@ -65,7 +65,7 @@ struct Config: Codable {
     }
 
     static func load(path: String?) -> Config {
-        let expanded = ((path ?? Config.defaultPath) as NSString).expandingTildeInPath
+        let expanded = expandedPath(path)
         guard let data = FileManager.default.contents(atPath: expanded) else {
             return Config()
         }
@@ -76,4 +76,50 @@ struct Config: Codable {
             return Config()
         }
     }
+
+    static func expandedPath(_ path: String?) -> String {
+        ((path ?? Config.defaultPath) as NSString).expandingTildeInPath
+    }
+
+    static func fileExists(path: String?) -> Bool {
+        FileManager.default.fileExists(atPath: expandedPath(path))
+    }
+
+    func encoded() -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(self) else { return "{}" }
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    @discardableResult
+    func save(path: String?) -> Bool {
+        let url = URL(fileURLWithPath: Config.expandedPath(path))
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            var text = encoded()
+            if !text.hasSuffix("\n") { text += "\n" }
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            return true
+        } catch {
+            Log.line("failed to write config (\(url.path)): \(error)")
+            return false
+        }
+    }
+
+    /// Apply a `key=value` pair. Returns false for unknown keys or bad values.
+    mutating func set(key: String, value: String) -> Bool {
+        switch key {
+        case "monitorVid": guard let n = HexInt.parse(value) else { return false }; monitorVid = HexInt(n)
+        case "monitorPid": guard let n = HexInt.parse(value) else { return false }; monitorPid = HexInt(n)
+        case "debounceSeconds": guard let d = Double(value) else { return false }; debounceSeconds = d
+        case "pollSeconds": guard let n = Double(value) else { return false }; pollSeconds = n
+        case "onAway": onAway = value
+        case "onReturn": onReturn = value
+        default: return false
+        }
+        return true
+    }
+
+    static let settableKeys = ["monitorVid", "monitorPid", "debounceSeconds", "pollSeconds", "onAway", "onReturn"]
 }
