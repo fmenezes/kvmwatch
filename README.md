@@ -94,7 +94,9 @@ Config file: `~/.config/kvmwatch/config.json`
   "debounceSeconds": 1.5,
   "pollSeconds": 1.0,
   "onAway": "mirror",
-  "onReturn": "extend"
+  "onReturn": "extend",
+  "log": "stderr",
+  "logPath": "~/Library/Logs/kvmwatch.log"
 }
 ```
 
@@ -105,6 +107,8 @@ Config file: `~/.config/kvmwatch/config.json`
 | `pollSeconds` | `1.0` | detection interval. |
 | `onAway` | `mirror` | `mirror` \| `none` \| `notify` |
 | `onReturn` | `extend` | `extend` \| `none` |
+| `log` | `stderr` | `stderr` \| `unified` \| `file` \| `auto` (see [Logging](#logging)) |
+| `logPath` | `~/Library/Logs/kvmwatch.log` | file used when `log=file` |
 
 Settings live in the config file — it is the single source of truth. The file is
 created automatically on the first daemon run (and by `./install.sh`); manage it
@@ -141,6 +145,25 @@ red. Switch the KVM away and back a couple of times: the device that turns red
 when you switch away (and white when you switch back) is your monitor's USB
 side. Put its `vid:pid` into `monitorVid` / `monitorPid`. The device matching
 your current config is marked `<= configured monitor`.
+
+## Logging
+
+Controlled by the `log` setting:
+
+| Value | Where | Inspect with |
+|---|---|---|
+| `stderr` (default) | stderr; under launchd redirected to `logPath` by the plist | `tail ~/Library/Logs/kvmwatch.log` |
+| `unified` | macOS unified logging (`os.Logger`, subsystem `com.filipe.kvmwatch`) | `log stream --predicate 'subsystem == "com.filipe.kvmwatch"'` |
+| `file` | appends to `logPath` directly, rotating at ~1 MB (one `.1` backup) | `tail ~/Library/Logs/kvmwatch.log` |
+| `auto` | `stderr` when stderr is a TTY, otherwise `unified` | either of the above |
+
+```sh
+kvmwatch --set log=unified     # idiomatic macOS unified logging
+kvmwatch --set log=file        # plain file with built-in rotation
+```
+
+`unified` is the idiomatic macOS choice for a daemon (the OS owns storage and
+rotation); `stderr` is the default because it's visible in a terminal too.
 
 ## Notes
 

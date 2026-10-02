@@ -43,13 +43,15 @@ struct Config: Codable {
     var pollSeconds: Double = 1.0
     var onAway: String = "mirror"
     var onReturn: String = "extend"
+    var log: String = "stderr"
+    var logPath: String = "~/Library/Logs/kvmwatch.log"
 
     static var defaultPath: String {
         ("~/.config/kvmwatch/config.json" as NSString).expandingTildeInPath
     }
 
     enum CodingKeys: String, CodingKey {
-        case monitorVid, monitorPid, debounceSeconds, pollSeconds, onAway, onReturn
+        case monitorVid, monitorPid, debounceSeconds, pollSeconds, onAway, onReturn, log, logPath
     }
 
     init() {}
@@ -62,6 +64,8 @@ struct Config: Codable {
         pollSeconds = try c.decodeIfPresent(Double.self, forKey: .pollSeconds) ?? 1.0
         onAway = try c.decodeIfPresent(String.self, forKey: .onAway) ?? "mirror"
         onReturn = try c.decodeIfPresent(String.self, forKey: .onReturn) ?? "extend"
+        log = try c.decodeIfPresent(String.self, forKey: .log) ?? "stderr"
+        logPath = try c.decodeIfPresent(String.self, forKey: .logPath) ?? "~/Library/Logs/kvmwatch.log"
     }
 
     static func load(path: String?) -> Config {
@@ -87,7 +91,7 @@ struct Config: Codable {
 
     func encoded() -> String {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         guard let data = try? encoder.encode(self) else { return "{}" }
         return String(data: data, encoding: .utf8) ?? "{}"
     }
@@ -116,10 +120,12 @@ struct Config: Codable {
         case "pollSeconds": guard let n = Double(value) else { return false }; pollSeconds = n
         case "onAway": onAway = value
         case "onReturn": onReturn = value
+        case "log": log = value
+        case "logPath": logPath = value
         default: return false
         }
         return true
     }
 
-    static let settableKeys = ["monitorVid", "monitorPid", "debounceSeconds", "pollSeconds", "onAway", "onReturn"]
+    static let settableKeys = ["monitorVid", "monitorPid", "debounceSeconds", "pollSeconds", "onAway", "onReturn", "log", "logPath"]
 }

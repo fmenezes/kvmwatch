@@ -101,11 +101,13 @@ case "detect":
     Detect.run(pollSeconds: config.pollSeconds, monitorVid: config.monitorVid.value, monitorPid: config.monitorPid.value)
 
 case "once":
+    Log.configure(log: config.log, logPath: config.logPath)
     let watcher = Watcher(config: config, dryRun: options.dryRun)
     Log.line("once :: \(watcher.describe())")
     watcher.act(present: USB.present(vid: config.monitorVid.value, pid: config.monitorPid.value))
 
 default:
+    Log.configure(log: config.log, logPath: config.logPath)
     if !Config.fileExists(path: options.configPath), config.save(path: options.configPath) {
         Log.line("wrote default config: \(Config.expandedPath(options.configPath))")
     }
