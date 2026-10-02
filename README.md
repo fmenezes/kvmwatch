@@ -37,20 +37,39 @@ monitor USB absent, no display      -> no-op     (real unplug)
 
 ## Install
 
+### Homebrew
+
 ```sh
-./install.sh
+brew install fmenezes/tap/kvmwatch
 ```
 
-This builds the release binary, copies it to `~/bin/kvmwatch`, writes a default
-config to `~/.config/kvmwatch/config.json` (if absent), and installs + loads a
-per-user launchd agent (`~/Library/LaunchAgents/com.filipe.kvmwatch.plist`) that
-runs at login.
+Then **configure your monitor** (required — the USB ids are machine-specific;
+see [Configure](#configure)) and start the service:
+
+```sh
+kvmwatch --detect                                       # find the monitor's USB ids
+kvmwatch --set monitorVid=0xVVVV --set monitorPid=0xPPPP
+brew services start fmenezes/tap/kvmwatch
+```
+
+`brew services` starts it now and at login. It is **not** configured to
+auto-restart, so if it exits (for example, if started before being configured)
+it stays down until you start it again. To stop or restart:
+
+```sh
+brew services stop    fmenezes/tap/kvmwatch
+brew services restart fmenezes/tap/kvmwatch
+```
 
 Uninstall:
 
 ```sh
-./uninstall.sh
+brew services stop fmenezes/tap/kvmwatch
+brew uninstall kvmwatch
 ```
+
+To build and run from source instead (development), see
+[Build from source](#build-from-source).
 
 ## Build from source
 
@@ -77,11 +96,13 @@ Or via SwiftPM without a separate build step:
 swift run -c release kvmwatch --status
 ```
 
-To install the binary on your `PATH` manually (instead of `./install.sh`):
+To put the built binary on your `PATH`:
 
 ```sh
 install -m 755 .build/release/kvmwatch /usr/local/bin/kvmwatch
 ```
+
+For a managed login service, use the Homebrew install above.
 
 ## Configure
 
@@ -102,7 +123,7 @@ Config file: `~/.config/kvmwatch/config.json`
 
 | Key | Default | Description |
 |---|---|---|
-| `monitorVid` / `monitorPid` | `0x0BDA` / `0x5450` | USB vendor/product id of the monitor's USB side. Run `kvmwatch --detect` and pick the device that disappears when the KVM is switched away (often a `BillBoard Device` or the monitor's USB hub). |
+| `monitorVid` / `monitorPid` | **(required)** | USB vendor/product id of the monitor's USB side. No default — the daemon refuses to start until both are set. Run `kvmwatch --detect` and pick the device that disappears when the KVM is switched away (often a `BillBoard Device` or the monitor's USB hub). |
 | `debounceSeconds` | `1.5` | settle time before acting; lets a real unplug finish removing the display. |
 | `pollSeconds` | `1.0` | detection interval. |
 | `onAway` | `mirror` | `mirror` \| `none` \| `notify` |
@@ -111,19 +132,20 @@ Config file: `~/.config/kvmwatch/config.json`
 | `logPath` | `~/Library/Logs/kvmwatch.log` | file used when `log=file` |
 
 Settings live in the config file — it is the single source of truth. The file is
-created automatically on the first daemon run (and by `./install.sh`); manage it
-from the CLI:
+created automatically on the first daemon run, but `monitorVid`/`monitorPid` have
+**no default**: until both are set, the daemon prints setup instructions and
+exits. Manage it from the CLI:
 
 ```sh
 kvmwatch --print-config                                    # show the effective config
-kvmwatch --set monitorVid=0x0BDA --set monitorPid=0x5450   # change a setting (creates file if absent)
+kvmwatch --set monitorVid=0x0BDA --set monitorPid=0x5450   # set the monitor (creates file if absent)
 ```
 
 `--set` validates keys/values and rewrites the file; after changing it, restart
-the agent so it re-reads:
+the service so it re-reads:
 
 ```sh
-launchctl kickstart -k gui/$(id -u)/com.filipe.kvmwatch
+brew services restart fmenezes/tap/kvmwatch
 ```
 
 ## Usage
@@ -167,6 +189,9 @@ rotation); `stderr` is the default because it's visible in a terminal too.
 
 ## Notes
 
+- `monitorVid`/`monitorPid` have no compiled default (they are machine-specific).
+  Until set, the daemon refuses to start and prints setup instructions rather than
+  silently doing nothing.
 - The display-level APIs cannot see the KVM switch at all — that is why this tool
   keys on USB. See the issue write-up for the measurements.
 - The action uses the CoreGraphics display configuration API

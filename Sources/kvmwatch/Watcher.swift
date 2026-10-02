@@ -3,19 +3,25 @@ import Foundation
 final class Watcher {
     private let config: Config
     private let dryRun: Bool
+    private let vid: Int
+    private let pid: Int
     private var lastPresent: Bool?
     private var pending: DispatchWorkItem?
 
     init(config: Config, dryRun: Bool) {
         self.config = config
         self.dryRun = dryRun
+        self.vid = config.monitorVid?.value ?? 0
+        self.pid = config.monitorPid?.value ?? 0
     }
 
     func describe() -> String {
-        let present = USB.present(vid: config.monitorVid.value, pid: config.monitorPid.value)
         let external = Display.external()
         let mirrored = external.map { Display.isMirrored($0) } ?? false
-        return "usbMonitor=\(present ? "present" : "absent") "
+        let state = config.isMonitorConfigured
+            ? "usbMonitor=\(USB.present(vid: vid, pid: pid) ? "present" : "absent")"
+            : "monitor=unconfigured"
+        return "\(state) "
             + "displayCount=\(Display.online().count) "
             + "external=\(external.map { String($0) } ?? "none") "
             + "mirrored=\(mirrored)"
@@ -27,7 +33,7 @@ final class Watcher {
     }
 
     func run() {
-        lastPresent = USB.present(vid: config.monitorVid.value, pid: config.monitorPid.value)
+        lastPresent = USB.present(vid: vid, pid: pid)
         Log.line("kvmwatch started :: \(describe())")
         // If launched while already switched away, fix the ghost immediately.
         if lastPresent == false, let external = Display.external(), !Display.isMirrored(external) {
@@ -43,7 +49,7 @@ final class Watcher {
     // MARK: - private
 
     private func reconcile() {
-        let present = USB.present(vid: config.monitorVid.value, pid: config.monitorPid.value)
+        let present = USB.present(vid: vid, pid: pid)
         guard present != lastPresent else { return }
         lastPresent = present
         // Debounce: a real unplug removes the display slightly after the USB

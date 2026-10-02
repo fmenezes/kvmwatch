@@ -37,14 +37,18 @@ struct HexInt: Codable, CustomStringConvertible, Equatable {
 }
 
 struct Config: Codable {
-    var monitorVid: HexInt = HexInt(0x0BDA)
-    var monitorPid: HexInt = HexInt(0x5450)
+    // No default: the monitor's USB ids are machine-specific. Left unset, the
+    // daemon refuses to start and tells you how to configure them.
+    var monitorVid: HexInt?
+    var monitorPid: HexInt?
     var debounceSeconds: Double = 1.5
     var pollSeconds: Double = 1.0
     var onAway: String = "mirror"
     var onReturn: String = "extend"
     var log: String = "stderr"
     var logPath: String = "~/Library/Logs/kvmwatch.log"
+
+    var isMonitorConfigured: Bool { monitorVid != nil && monitorPid != nil }
 
     static var defaultPath: String {
         ("~/.config/kvmwatch/config.json" as NSString).expandingTildeInPath
@@ -58,8 +62,8 @@ struct Config: Codable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        monitorVid = try c.decodeIfPresent(HexInt.self, forKey: .monitorVid) ?? HexInt(0x0BDA)
-        monitorPid = try c.decodeIfPresent(HexInt.self, forKey: .monitorPid) ?? HexInt(0x5450)
+        monitorVid = try c.decodeIfPresent(HexInt.self, forKey: .monitorVid)
+        monitorPid = try c.decodeIfPresent(HexInt.self, forKey: .monitorPid)
         debounceSeconds = try c.decodeIfPresent(Double.self, forKey: .debounceSeconds) ?? 1.5
         pollSeconds = try c.decodeIfPresent(Double.self, forKey: .pollSeconds) ?? 1.0
         onAway = try c.decodeIfPresent(String.self, forKey: .onAway) ?? "mirror"

@@ -9,7 +9,7 @@ enum Detect {
     private static let dim = "\u{1B}[2m"
     private static let bold = "\u{1B}[1m"
 
-    static func run(pollSeconds: Double, monitorVid: Int, monitorPid: Int) {
+    static func run(pollSeconds: Double, monitorVid: Int?, monitorPid: Int?) {
         let color = isatty(STDOUT_FILENO) != 0
         func paint(_ text: String, _ code: String) -> String { color ? code + text + reset : text }
         func stamp() -> String {
@@ -17,9 +17,9 @@ enum Detect {
             return f.string(from: Date())
         }
         func tag(_ device: USBDevice) -> String {
-            (device.vendorId == monitorVid && device.productId == monitorPid)
-                ? paint("  <= configured monitor", bold)
-                : ""
+            guard let vid = monitorVid, let pid = monitorPid,
+                  device.vendorId == vid, device.productId == pid else { return "" }
+            return paint("  <= configured monitor", bold)
         }
         func out(_ text: String) {
             print(text)

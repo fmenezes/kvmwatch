@@ -6,7 +6,7 @@ extension Array {
     }
 }
 
-let version = "0.1.0"
+let version = "0.2.0"
 
 func printUsage() {
     print("""
@@ -28,7 +28,31 @@ func printUsage() {
       --version          show version
 
     Settings live in the config file; use --set to change them.
+
+    First run: the monitor's USB ids are required. Find them with --detect, then:
+      kvmwatch --set monitorVid=0xVVVV --set monitorPid=0xPPPP
     """)
+}
+
+func failUnconfigured() -> Never {
+    let message = """
+    kvmwatch: monitor USB device not configured.
+
+      1. Run:  kvmwatch --detect
+      2. Switch the KVM away and back — the device that turns red (removed) then
+         white (detected) is your monitor.
+      3. Configure it:  kvmwatch --set monitorVid=0xVVVV --set monitorPid=0xPPPP
+
+    """
+    FileHandle.standardError.write(message.data(using: .utf8)!)
+    exit(1)
+}
+
+func monitorIDs(_ config: Config) -> (vid: Int, pid: Int) {
+    guard let vid = config.monitorVid?.value, let pid = config.monitorPid?.value else {
+        failUnconfigured()
+    }
+    return (vid, pid)
 }
 
 struct Options {
@@ -98,19 +122,23 @@ case "status":
     print(Watcher(config: config, dryRun: true).describe())
 
 case "detect":
-    Detect.run(pollSeconds: config.pollSeconds, monitorVid: config.monitorVid.value, monitorPid: config.monitorPid.value)
+    Detect.run(pollSeconds: config.pollSeconds,
+               monitorVid: config.monitorVid?.value,
+               monitorPid: config.monitorPid?.value)
 
 case "once":
     Log.configure(log: config.log, logPath: config.logPath)
+    let ids = monitorIDs(config)
     let watcher = Watcher(config: config, dryRun: options.dryRun)
     Log.line("once :: \(watcher.describe())")
-    watcher.act(present: USB.present(vid: config.monitorVid.value, pid: config.monitorPid.value))
+    watcher.act(present: USB.present(vid: ids.vid, pid: ids.pid))
 
 default:
     Log.configure(log: config.log, logPath: config.logPath)
     if !Config.fileExists(path: options.configPath), config.save(path: options.configPath) {
-        Log.line("wrote default config: \(Config.expandedPath(options.configPath))")
+        Log.line("wrote config: \(Config.expandedPath(options.configPath))")
     }
+    _ = monitorIDs(config) // exits with guidance if the monitor is not configured
     let watcher = Watcher(config: config, dryRun: options.dryRun)
     watcher.run()
 }
