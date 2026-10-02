@@ -4,7 +4,16 @@ import IOKit
 struct USBDevice {
     let vendorId: Int
     let productId: Int
+    let locationId: Int
     let name: String
+
+    /// Stable identity across polls (locationID is unique per port/device).
+    var key: String {
+        let ids = String(format: "%04X:%04X", vendorId, productId)
+        return locationId != 0 ? "\(locationId)-\(ids)-\(name)" : "\(ids)-\(name)"
+    }
+
+    var label: String { String(format: "0x%04X:0x%04X  %@", vendorId, productId, name) }
 }
 
 /// Native IOKit USB inspection — no `ioreg` subprocess, no polling of the shell.
@@ -37,8 +46,9 @@ enum USB {
         while service != 0 {
             let vid = (property(service, "idVendor") as? NSNumber)?.intValue ?? 0
             let pid = (property(service, "idProduct") as? NSNumber)?.intValue ?? 0
+            let location = (property(service, "locationID") as? NSNumber)?.intValue ?? 0
             let name = (property(service, "USB Product Name") as? String) ?? "?"
-            devices.append(USBDevice(vendorId: vid, productId: pid, name: name))
+            devices.append(USBDevice(vendorId: vid, productId: pid, locationId: location, name: name))
             IOObjectRelease(service)
             service = IOIteratorNext(iterator)
         }

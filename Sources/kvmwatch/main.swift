@@ -17,7 +17,7 @@ func printUsage() {
     Modes:
       --status           print current detection state and exit
       --once             evaluate once, apply the configured action, exit
-      --detect           list USB devices (vid:pid name) to help configure the monitor
+      --detect           watch USB devices live (detected=white, removed=red) to configure the monitor
       --dry-run          log intended actions without applying them
 
     Options (override the config file):
@@ -89,9 +89,7 @@ case "status":
     print(Watcher(config: config, dryRun: true).describe())
 
 case "detect":
-    for device in USB.all().sorted(by: { ($0.vendorId, $0.productId) < ($1.vendorId, $1.productId) }) {
-        print(String(format: "0x%04X:0x%04X  %@", device.vendorId, device.productId, device.name))
-    }
+    Detect.run(pollSeconds: config.pollSeconds, monitorVid: config.monitorVid.value, monitorPid: config.monitorPid.value)
 
 case "once":
     let watcher = Watcher(config: config, dryRun: options.dryRun)

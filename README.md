@@ -118,16 +118,19 @@ kvmwatch --vid 0x0BDA --pid 0x5450 --on-away notify
 kvmwatch                 # run the watcher (this is what launchd starts)
 kvmwatch --status        # print current detection state and exit
 kvmwatch --once          # evaluate once, apply the action, exit
-kvmwatch --detect        # list USB devices (vid:pid name) to configure the monitor
+kvmwatch --detect        # watch USB devices live (detected=white, removed=red)
 kvmwatch --dry-run       # log intended actions without applying them
 kvmwatch --help
 ```
 
 ## Finding your monitor's USB ids
 
-Switch the KVM **away**, run `kvmwatch --detect`, switch **back**, run it again,
-and diff. The `vid:pid` that disappears while switched away is the one to
-configure.
+Run `kvmwatch --detect` and leave it running. It prints the currently attached
+USB devices, then streams changes live — **detected** in white, **removed** in
+red. Switch the KVM away and back a couple of times: the device that turns red
+when you switch away (and white when you switch back) is your monitor's USB
+side. Put its `vid:pid` into `monitorVid` / `monitorPid`. The device matching
+your current config is marked `<= configured monitor`.
 
 ## Notes
 
