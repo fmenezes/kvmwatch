@@ -106,18 +106,13 @@ Config file: `~/.config/kvmwatch/config.json`
 | `onAway` | `mirror` | `mirror` \| `none` \| `notify` |
 | `onReturn` | `extend` | `extend` \| `none` |
 
-Every value can be overridden on the command line (flags win over the file):
+Settings live in the config file — it is the single source of truth. The file is
+created automatically on the first daemon run (and by `./install.sh`); manage it
+from the CLI:
 
 ```sh
-kvmwatch --vid 0x0BDA --pid 0x5450 --on-away notify
-```
-
-The file is created automatically on first daemon run (and by `./install.sh`).
-Manage it from the CLI:
-
-```sh
-kvmwatch --print-config                                    # show effective config (defaults + file + flags)
-kvmwatch --set monitorVid=0x0BDA --set monitorPid=0x5450   # persist changes (creates file if absent)
+kvmwatch --print-config                                    # show the effective config
+kvmwatch --set monitorVid=0x0BDA --set monitorPid=0x5450   # change a setting (creates file if absent)
 ```
 
 `--set` validates keys/values and rewrites the file; after changing it, restart
@@ -126,9 +121,6 @@ the agent so it re-reads:
 ```sh
 launchctl kickstart -k gui/$(id -u)/com.filipe.kvmwatch
 ```
-
-Note the difference: `--vid` / `--on-away` are **transient** overrides for that
-run, while `--set` **persists** to the file.
 
 ## Usage
 

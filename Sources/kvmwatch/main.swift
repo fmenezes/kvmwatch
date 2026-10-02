@@ -20,29 +20,19 @@ func printUsage() {
       --detect           watch USB devices live (detected=white, removed=red) to configure the monitor
       --dry-run          log intended actions without applying them
 
-    Options (override the config file):
+    Options:
       --config <path>    config file (default ~/.config/kvmwatch/config.json)
-      --vid <0xVVVV>     monitor USB vendor id
-      --pid <0xPPPP>     monitor USB product id
-      --debounce <secs>  settle time before acting (default 1.5)
-      --poll <secs>      detection interval (default 1.0)
-      --on-away <mode>   mirror | none | notify   (default mirror)
-      --on-return <mode> extend | none            (default extend)
-      --print-config     print the effective config (defaults + file + flags) and exit
+      --print-config     print the effective config and exit
       --set <key=value>  update a config key (repeatable); creates the file if missing
       -h, --help         show this help
       --version          show version
+
+    Settings live in the config file; use --set to change them.
     """)
 }
 
 struct Options {
     var configPath: String?
-    var vid: Int?
-    var pid: Int?
-    var debounce: Double?
-    var poll: Double?
-    var onAway: String?
-    var onReturn: String?
     var sets: [String] = []
     var printConfig = false
     var dryRun = false
@@ -56,12 +46,6 @@ func parse(_ args: [String]) -> Options {
     while index < args.count {
         switch args[index] {
         case "--config": options.configPath = next()
-        case "--vid": if let v = next(), let n = HexInt.parse(v) { options.vid = n }
-        case "--pid": if let v = next(), let n = HexInt.parse(v) { options.pid = n }
-        case "--debounce": if let v = next(), let n = Double(v) { options.debounce = n }
-        case "--poll": if let v = next(), let n = Double(v) { options.poll = n }
-        case "--on-away": options.onAway = next()
-        case "--on-return": options.onReturn = next()
         case "--set": if let pair = next() { options.sets.append(pair) }
         case "--print-config": options.printConfig = true
         case "--status": options.mode = "status"
@@ -83,12 +67,6 @@ func parse(_ args: [String]) -> Options {
 let options = parse(Array(CommandLine.arguments.dropFirst()))
 
 var config = Config.load(path: options.configPath)
-if let v = options.vid { config.monitorVid = HexInt(v) }
-if let v = options.pid { config.monitorPid = HexInt(v) }
-if let v = options.debounce { config.debounceSeconds = v }
-if let v = options.poll { config.pollSeconds = v }
-if let v = options.onAway { config.onAway = v }
-if let v = options.onReturn { config.onReturn = v }
 
 // Config-management commands write the file and exit.
 if !options.sets.isEmpty {
