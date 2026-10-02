@@ -30,7 +30,6 @@ func printUsage() {
       --on-return <mode> extend | none            (default extend)
       --print-config     print the effective config (defaults + file + flags) and exit
       --set <key=value>  update a config key (repeatable); creates the file if missing
-      --init             write the default config file if it does not already exist
       -h, --help         show this help
       --version          show version
     """)
@@ -46,7 +45,6 @@ struct Options {
     var onReturn: String?
     var sets: [String] = []
     var printConfig = false
-    var initConfig = false
     var dryRun = false
     var mode = "run"
 }
@@ -66,7 +64,6 @@ func parse(_ args: [String]) -> Options {
         case "--on-return": options.onReturn = next()
         case "--set": if let pair = next() { options.sets.append(pair) }
         case "--print-config": options.printConfig = true
-        case "--init": options.initConfig = true
         case "--status": options.mode = "status"
         case "--once": options.mode = "once"
         case "--detect": options.mode = "detect"
@@ -94,19 +91,6 @@ if let v = options.onAway { config.onAway = v }
 if let v = options.onReturn { config.onReturn = v }
 
 // Config-management commands write the file and exit.
-if options.initConfig {
-    let path = Config.expandedPath(options.configPath)
-    if Config.fileExists(path: options.configPath) {
-        print("config already exists: \(path)")
-    } else if config.save(path: options.configPath) {
-        print("wrote config: \(path)")
-        print(config.encoded())
-    } else {
-        exit(1)
-    }
-    exit(0)
-}
-
 if !options.sets.isEmpty {
     for pair in options.sets {
         guard let eq = pair.firstIndex(of: "=") else {

@@ -116,9 +116,8 @@ The file is created automatically on first daemon run (and by `./install.sh`).
 Manage it from the CLI:
 
 ```sh
-kvmwatch --init                                            # write defaults if absent (never overwrites)
 kvmwatch --print-config                                    # show effective config (defaults + file + flags)
-kvmwatch --set monitorVid=0x0BDA --set monitorPid=0x5450   # persist changes
+kvmwatch --set monitorVid=0x0BDA --set monitorPid=0x5450   # persist changes (creates file if absent)
 ```
 
 `--set` validates keys/values and rewrites the file; after changing it, restart

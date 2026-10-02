@@ -20,11 +20,10 @@ cp "$BIN_SRC" "$BIN_DIR/kvmwatch"
 
 echo "==> config"
 mkdir -p "$CONFIG_DIR"
-if [ ! -f "$CONFIG_FILE" ]; then
-    cp "$REPO_DIR/config.example.json" "$CONFIG_FILE"
-    echo "    wrote default $CONFIG_FILE"
-else
+if [ -f "$CONFIG_FILE" ]; then
     echo "    keeping existing $CONFIG_FILE"
+else
+    echo "    defaults will be written to $CONFIG_FILE on first run"
 fi
 
 echo "==> launch agent"

@@ -1,8 +1,0 @@
-{
-  "monitorVid": "0x0BDA",
-  "monitorPid": "0x5450",
-  "debounceSeconds": 1.5,
-  "pollSeconds": 1.0,
-  "onAway": "mirror",
-  "onReturn": "extend"
-}
